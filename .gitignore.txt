@@ -1,0 +1,11 @@
+# Python
+backend/venv/
+backend/__pycache__/
+*.pyc
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Datos (Opcional: decide si quieres subir tu CSV actual o no)
+# backend/data_storage/
