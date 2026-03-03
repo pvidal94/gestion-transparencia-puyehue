@@ -101,14 +101,37 @@ export default function App() {
     await editar(codigo, 'FechaEfectiva', hoy);
   };
 
+  const toggleManualForm = async () => {
+    if (!showManualForm) {
+      try {
+        const res = await axios.get('http://localhost:8000/get-next-codigo');
+        setManualRow({ Codigo: res.data.next_codigo, Ingreso: '', Caducidad: '' });
+      } catch (e) {
+        console.error("Error obteniendo correlativo");
+      }
+    }
+    setShowManualForm(!showManualForm);
+  };
+
   const agregarManual = async () => {
-    if (!manualRow.Codigo || !manualRow.Ingreso || !manualRow.Caducidad) return alert("Complete los campos.");
+    // Verificación estricta de campos
+    if (!manualRow.Codigo || !manualRow.Ingreso || !manualRow.Caducidad) {
+        return alert("Por favor, complete la Fecha de Ingreso para calcular el vencimiento.");
+    }
+    
     try {
+      // Enviamos el objeto manualRow completo
       const res = await axios.post('http://localhost:8000/add-manual', manualRow);
-      setData(res.data);
-      setShowManualForm(false);
-      setManualRow({ Codigo: '', Ingreso: '', Caducidad: '' });
-    } catch (e) { console.error(e); }
+      if (res.data.detalles) {
+          setData(res.data);
+          setShowManualForm(false);
+          setManualRow({ Codigo: '', Ingreso: '', Caducidad: '' });
+          alert("Solicitud guardada con éxito.");
+      }
+    } catch (e) { 
+        console.error(e); 
+        alert("Error al conectar con el servidor.");
+    }
   };
 
   const eliminarFila = async (codigo) => {
@@ -160,9 +183,10 @@ export default function App() {
         <div style={{ display: 'flex', gap: '10px' }}>
           {isAdmin && (
             <>
-              <button onClick={() => setShowManualForm(!showManualForm)} style={{ padding: '12px 18px', backgroundColor: THEME.accent, color: 'white', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>＋ Nueva</button>
+              <button onClick={toggleManualForm} style={{ padding: '12px 18px', backgroundColor: THEME.accent, color: 'white', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                {showManualForm ? 'Cancelar' : '＋ Nueva'}
+              </button>
               <button onClick={() => window.open('http://localhost:8000/export-excel', '_blank')} style={{ padding: '12px 18px', backgroundColor: THEME.navy, color: THEME.white, border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>📊 Excel</button>
-              {/* NUEVO BOTÓN DE RESPALDO */}
               <button onClick={() => window.open('http://localhost:8000/download-backup', '_blank')} style={{ padding: '12px 18px', backgroundColor: '#475569', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>💾 Respaldo</button>
             </>
           )}
@@ -197,25 +221,28 @@ export default function App() {
         </div>
       )}
 
-      {/* FORMULARIO MANUAL */}
+      {/* FORMULARIO MANUAL ACTUALIZADO */}
       {isAdmin && showManualForm && (
-        <div style={{ maxWidth: '1400px', margin: '0 auto 30px auto', backgroundColor: THEME.white, padding: '30px', borderRadius: '24px', border: `2px solid ${THEME.accent}` }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto 30px auto', backgroundColor: THEME.white, padding: '30px', borderRadius: '24px', border: `2px solid ${THEME.accent}`, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
             <div>
-              <label style={{ fontSize: '11px', fontWeight: 'bold' }}>CÓDIGO SIGT</label>
-              <input value={manualRow.Codigo} onChange={e => setManualRow({ ...manualRow, Codigo: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${THEME.border}` }} />
+              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>CÓDIGO SIGT (AUTO)</label>
+              <input value={manualRow.Codigo} readOnly style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${THEME.border}`, backgroundColor: '#f8fafc', marginTop: '5px' }} />
             </div>
             <div>
-              <label style={{ fontSize: '11px', fontWeight: 'bold' }}>FECHA INGRESO</label>
+              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>FECHA INGRESO</label>
               <input type="date" value={manualRow.Ingreso} onChange={async (e) => {
-                setManualRow({ ...manualRow, Ingreso: e.target.value });
-                const res = await axios.post('http://localhost:8000/calcular-vencimiento-inicial', { Ingreso: e.target.value });
-                setManualRow(prev => ({ ...prev, Caducidad: res.data.Caducidad }));
-              }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${THEME.border}` }} />
+                const fechaIngreso = e.target.value;
+                setManualRow(prev => ({ ...prev, Ingreso: fechaIngreso }));
+                if (fechaIngreso) {
+                  const res = await axios.post('http://localhost:8000/calcular-vencimiento-inicial', { Ingreso: fechaIngreso });
+                  setManualRow(prev => ({ ...prev, Caducidad: res.data.Caducidad }));
+                }
+              }} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${THEME.border}`, marginTop: '5px' }} />
             </div>
             <div>
-              <label style={{ fontSize: '11px', fontWeight: 'bold' }}>VENCIMIENTO</label>
-              <input type="date" value={manualRow.Caducidad} readOnly style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${THEME.border}`, backgroundColor: '#f0fdf4' }} />
+              <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>VENCIMIENTO (AUTO)</label>
+              <input type="date" value={manualRow.Caducidad} readOnly style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${THEME.border}`, backgroundColor: '#f0fdf4', fontWeight: 'bold', marginTop: '5px' }} />
             </div>
           </div>
           <button onClick={agregarManual} style={{ width: '100%', marginTop: '20px', padding: '12px', backgroundColor: THEME.success, color: 'white', borderRadius: '10px', fontWeight: '700', border: 'none', cursor: 'pointer' }}>Guardar Solicitud</button>
