@@ -158,6 +158,52 @@ async def export():
 async def download_backup():
     return StreamingResponse(open(DB_PATH, "rb"), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=backup.csv"})
 
+
+# --- AGREGAR ESTA FUNCIÓN PARA EL CÁLCULO ---
+def calcular_fecha_vencimiento(fecha_ingreso_str, con_prorroga):
+    try:
+        dt_inicio = normalizar_fecha_estricta(fecha_ingreso_str)
+        if not dt_inicio: return ""
+        
+        inicio = dt_inicio.date()
+        dias_a_sumar = 30 if con_prorroga else 20
+        holidays = [np.datetime64(f) for f in FERIADOS_CHILE]
+        
+        # Cálculo de días hábiles usando numpy
+        vencimiento = np.busday_offset(inicio, dias_a_sumar, roll='forward', holidays=holidays)
+        return pd.to_datetime(vencimiento).strftime('%d-%m-%Y')
+    except Exception as e:
+        print(f"Error calculando vencimiento: {e}")
+        return ""
+
+# --- AGREGAR/REEMPLAZAR LA RUTA DE ACTUALIZACIÓN ---
+@app.post("/update-row")
+async def update(payload: dict = Body(...)):
+    if not os.path.exists(DB_PATH): return {"status": "error"}
+    
+    df = pd.read_csv(DB_PATH).astype(str)
+    df = normalizar_df(df)
+    
+    idx = df[df['Código'] == str(payload['Codigo'])].index
+    if not idx.empty:
+        campo_final = {'FechaEfectiva': 'Fecha_E_Portal'}.get(payload['Campo'], payload['Campo'])
+        valor_nuevo = str(payload['Valor'])
+        
+        # Si el campo es Prorroga, actualizamos el valor y recalculamos Caducidad
+        if campo_final == 'Prorroga':
+            # Convertimos el booleano de React a '1' o '0' para el CSV
+            estado_prorroga = valor_nuevo.lower() == 'true'
+            df.at[idx[0], 'Prorroga'] = '1' if estado_prorroga else '0'
+            # Recalcular Caducidad basado en la nueva prórroga
+            df.at[idx[0], 'Fecha_Caducidad'] = calcular_fecha_vencimiento(df.at[idx[0], 'Fecha_Ingreso'], estado_prorroga)
+        else:
+            df.at[idx[0], campo_final] = valor_nuevo
+            
+        df.to_csv(DB_PATH, index=False)
+        return procesar_informacion(df)
+    
+    raise HTTPException(status_code=404, detail="No encontrado")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
