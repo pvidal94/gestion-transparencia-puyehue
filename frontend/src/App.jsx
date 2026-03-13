@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-const RESPONSABLES_BASE = ["Juan Soto", "Bety Mora", "Marta Ovando", "Jorge Pacheco", "Byron Oyarzun", "Guido Vidal", "Eladio Acum", "Nefi Linco", "Soledad Villalobos", "Javier Lopez", "Raúl Navarrete", "Daniela Silva", "Felipe Post", "Robinson Rosales", "Daniella Muñoz","Cristian Figueroa","Graciela Copilai","Karin Fuentes","Juan Pablo Mardondes","Pablo Hernandez"];
+const RESPONSABLES_BASE = ["Juan Soto", "Bety Mora", "Marta Ovando", "Jorge Pacheco", "Byron Oyarzun", "Guido Vidal", "Eladio Acum", "Nefi Linco", "Soledad Villalobos", "Javier Lopez", "Raúl Navarrete", "Daniela Silva", "Felipe Post", "Robinson Rosales", "Daniella Muñoz","Cristian Figueroa","Graciela Copilai","Karin Fuentes","Juan Pablo Mardondes","Pablo Hernandez", "Desistida por el usuario"];
 
-const DEPARTAMENTOS = ["Administrador Municipal", "Oficina de Transparencia Municipal", "Oficina de Gestión de Riesgos y Desastres", "Oficina de Transformación Digital", "Oficina de Prevención de Riesgos", "Secretaría Municipal", "Oficina O.I.R.S", "Oficina de Partes", "Oficina de Seguridad Pública e Inspección Municipal", "Oficina de Control Vehicular", "Oficina de Comunicaciones", "Oficina de Informática", "Dirección de Control", "Secretaría Comunal de Planificación", "Dirección de Obras Municipales", "Unidad de Aseo y Ornato", "Oficina de Caminos Vecinales", "Oficina de Cementerio", "Oficina de Alumbrado Público", "Dirección de Administración y Finanzas", "Oficina de Contabilidad", "Oficina de Tesorería", "Oficina de Rentas y Patentes", "Oficina de Adquisiciones", "Oficina de Inventario", "Oficina de Personal", "Dirección de Desarrollo Comunitario", "Departamento Social", "Departamento de Organizaciones Comunitarias", "Oficina de Programas Sociales", "Oficina de Deportes", "Oficina de Pueblos Originarios", "Departamento de Desarrollo Rural", "Departamento de Turismo", "Oficina PRODESAL / PDTI / PRODER", "Oficina de Cultura / Biblioteca Municipal", "Oficina de Medio Ambiente", "Oficina de Fomento Productivo", "Oficina de Tránsito", "Oficina de Licencias de Conducir", "Oficina de Permisos de Circulación", "Departamento de Educación Municipal", "Departamento de Salud Municipal"];
+const DEPARTAMENTOS = ["Administrador Municipal", "Oficina de Transparencia Municipal", "Oficina de Gestión de Riesgos y Desastres", "Oficina de Transformación Digital", "Oficina de Prevención de Riesgos", "Secretaría Municipal", "Oficina O.I.R.S", "Oficina de Partes", "Oficina de Seguridad Pública e Inspección Municipal", "Oficina de Control Vehicular", "Oficina de Comunicaciones", "Oficina de Informática", "Dirección de Control", "Secretaría Comunal de Planificación", "Dirección de Obras Municipales", "Unidad de Aseo y Ornato", "Oficina de Caminos Vecinales", "Oficina de Cementerio", "Oficina de Alumbrado Público", "Dirección de Administración y Finanzas", "Oficina de Contabilidad", "Oficina de Tesorería", "Oficina de Rentas y Patentes", "Oficina de Adquisiciones", "Oficina de Inventario", "Oficina de Personal", "Dirección de Desarrollo Comunitario", "Departamento Social", "Departamento de Organizaciones Comunitarias", "Oficina de Programas Sociales", "Oficina de Deportes", "Oficina de Pueblos Originarios", "Departamento de Desarrollo Rural", "Departamento de Turismo", "Oficina PRODESAL / PDTI / PRODER", "Oficina de Cultura / Biblioteca Municipal", "Oficina de Medio Ambiente", "Oficina de Fomento Productivo", "Oficina de Tránsito", "Oficina de Licencias de Conducir", "Oficina de Permisos de Circulación", "Departamento de Educación Municipal", "Departamento de Salud Municipal", "Desistida por el usuario"];
 
 const THEME = {
   navy: '#0f172a',
@@ -26,6 +26,7 @@ export default function App() {
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualRow, setManualRow] = useState({ Codigo: '', Ingreso: '', Caducidad: '' });
   const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("TODOS");
 
   useEffect(() => { if (user) cargarDatos(); }, [user]);
 
@@ -48,10 +49,7 @@ export default function App() {
     } catch (err) { setLoginError(true); }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('user_puyehue');
-  };
+  const handleLogout = () => { setUser(null); localStorage.removeItem('user_puyehue'); };
 
   const manejarSubida = async (codigo, archivo, tipo) => {
     if (!archivo) return;
@@ -86,11 +84,7 @@ export default function App() {
 
   const editar = async (codigo, campo, valor) => {
     try {
-      const campoBackend = campo === 'FechaEfectiva' ? 'Fecha_E_Portal' : 
-                           campo === 'Ingreso' ? 'Fecha_Ingreso' : campo;
-      const res = await axios.post('http://localhost:8000/update-row', {
-        Codigo: codigo, Campo: campoBackend, Valor: valor
-      });
+      const res = await axios.post('http://localhost:8000/update-row', { Codigo: codigo, Campo: campo, Valor: valor });
       if (res.data.detalles) setData(res.data);
     } catch (e) { console.error("Error al editar:", e); }
   };
@@ -106,32 +100,24 @@ export default function App() {
       try {
         const res = await axios.get('http://localhost:8000/get-next-codigo');
         setManualRow({ Codigo: res.data.next_codigo, Ingreso: '', Caducidad: '' });
-      } catch (e) {
-        console.error("Error obteniendo correlativo");
-      }
+      } catch (e) { console.error("Error obteniendo correlativo"); }
     }
     setShowManualForm(!showManualForm);
   };
 
   const agregarManual = async () => {
-    // Verificación estricta de campos
     if (!manualRow.Codigo || !manualRow.Ingreso || !manualRow.Caducidad) {
-        return alert("Por favor, complete la Fecha de Ingreso para calcular el vencimiento.");
+        return alert("Por favor, complete la Fecha de Ingreso.");
     }
-    
     try {
-      // Enviamos el objeto manualRow completo
       const res = await axios.post('http://localhost:8000/add-manual', manualRow);
       if (res.data.detalles) {
           setData(res.data);
           setShowManualForm(false);
           setManualRow({ Codigo: '', Ingreso: '', Caducidad: '' });
-          alert("Solicitud guardada con éxito.");
+          alert("Solicitud guardada.");
       }
-    } catch (e) { 
-        console.error(e); 
-        alert("Error al conectar con el servidor.");
-    }
+    } catch (e) { alert("Error al conectar con el servidor."); }
   };
 
   const eliminarFila = async (codigo) => {
@@ -140,18 +126,33 @@ export default function App() {
     setData(res.data);
   };
 
-  const datosFiltrados = data.detalles.filter(item => {
+  // --- LÓGICA DE FILTRADO Y ORDEN INVERSO ---
+  const datosFiltrados = [...data.detalles].reverse().filter(item => {
     const coincideBusqueda = item.Codigo.toLowerCase().includes(busqueda.toLowerCase()) ||
                              item.Responsable.toLowerCase().includes(busqueda.toLowerCase()) ||
                              item.Dependencia.toLowerCase().includes(busqueda.toLowerCase());
-    if (isAdmin) return coincideBusqueda;
-    return coincideBusqueda && item.Responsable === user;
+    
+    let coincideEstado = true;
+    if (filtroEstado === "EN ANÁLISIS") coincideEstado = item.Estado === "EN ANÁLISIS" && item.SLA === "normal";
+    if (filtroEstado === "CRÍTICO") coincideEstado = item.Estado === "EN ANÁLISIS" && item.SLA === "critico";
+    if (filtroEstado === "REALIZADO") coincideEstado = item.Estado === "RESPUESTA ENTREGADA";
+
+    const permisoUsuario = isAdmin ? true : item.Responsable === user;
+    return coincideBusqueda && coincideEstado && permisoUsuario;
   });
+
+  const countState = (estado, sla) => {
+    return data.detalles.filter(d => {
+        const checkUser = isAdmin ? true : d.Responsable === user;
+        if (sla) return d.Estado === estado && d.SLA === sla && checkUser;
+        return d.Estado === estado && checkUser;
+    }).length;
+  };
 
   if (!user) {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: THEME.navy }}>
-        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '24px', width: '350px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+        <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '24px', width: '350px', textAlign: 'center' }}>
           <img src="/logo_puyehue.png" alt="Logo" style={{ height: '80px', marginBottom: '20px' }} />
           <h2 style={{ color: THEME.navy, margin: 0, fontWeight: '800' }}>SGT Puyehue</h2>
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
@@ -183,9 +184,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: '10px' }}>
           {isAdmin && (
             <>
-              <button onClick={toggleManualForm} style={{ padding: '12px 18px', backgroundColor: THEME.accent, color: 'white', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>
-                {showManualForm ? 'Cancelar' : '＋ Nueva'}
-              </button>
+              <button onClick={toggleManualForm} style={{ padding: '12px 18px', backgroundColor: THEME.accent, color: 'white', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>＋ Nueva</button>
               <button onClick={() => window.open('http://localhost:8000/export-excel', '_blank')} style={{ padding: '12px 18px', backgroundColor: THEME.navy, color: THEME.white, border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>📊 Excel</button>
               <button onClick={() => window.open('http://localhost:8000/download-backup', '_blank')} style={{ padding: '12px 18px', backgroundColor: '#475569', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>💾 Respaldo</button>
             </>
@@ -194,7 +193,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* SECCIÓN ANALÍTICA */}
+      {/* ANALÍTICA MENSUAL (Solo Admin) */}
       {isAdmin && (
         <div style={{ maxWidth: '1400px', margin: '0 auto 30px auto', display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '25px' }}>
           <div style={{ backgroundColor: THEME.white, padding: '20px', borderRadius: '24px', border: `1px solid ${THEME.border}`, height: '260px' }}>
@@ -211,7 +210,7 @@ export default function App() {
             {Object.entries(data.stats).map(([mes, total]) => (
               <div key={mes} style={{
                 backgroundColor: THEME.white, padding: '15px', borderRadius: '16px', border: total > 0 ? `1.5px solid ${THEME.accent}` : `1px solid ${THEME.border}`,
-                textAlign: 'center', opacity: total > 0 ? 1 : 0.4, transition: '0.3s'
+                textAlign: 'center', opacity: total > 0 ? 1 : 0.4
               }}>
                 <div style={{ fontSize: '10px', fontWeight: '800', color: total > 0 ? THEME.accent : '#94a3b8', textTransform: 'uppercase' }}>{mes}</div>
                 <div style={{ fontSize: '22px', fontWeight: '900', color: THEME.navy }}>{total}</div>
@@ -221,7 +220,27 @@ export default function App() {
         </div>
       )}
 
-      {/* FORMULARIO MANUAL ACTUALIZADO */}
+      {/* PANEL DE FILTROS RÁPIDOS (4 TARJETAS CENTRADAS) */}
+      <div style={{ maxWidth: '1100px', margin: '0 auto 30px auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', justifyContent: 'center' }}>
+        <div onClick={() => setFiltroEstado("TODOS")} style={{ cursor: 'pointer', backgroundColor: filtroEstado === "TODOS" ? THEME.navy : THEME.white, padding: '20px', borderRadius: '20px', border: `1px solid ${THEME.border}`, textAlign: 'center', transition: '0.3s' }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', color: filtroEstado === "TODOS" ? 'white' : '#64748b' }}>TOTAL SOLICITUDES</div>
+          <div style={{ fontSize: '28px', fontWeight: '900', color: filtroEstado === "TODOS" ? 'white' : THEME.navy }}>{isAdmin ? data.detalles.length : data.detalles.filter(d=>d.Responsable===user).length}</div>
+        </div>
+        <div onClick={() => setFiltroEstado("EN ANÁLISIS")} style={{ cursor: 'pointer', backgroundColor: filtroEstado === "EN ANÁLISIS" ? THEME.accent : THEME.white, padding: '20px', borderRadius: '20px', border: `1px solid ${THEME.border}`, textAlign: 'center', transition: '0.3s' }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', color: filtroEstado === "EN ANÁLISIS" ? 'white' : THEME.accent }}>EN ANÁLISIS</div>
+          <div style={{ fontSize: '28px', fontWeight: '900', color: filtroEstado === "EN ANÁLISIS" ? 'white' : THEME.navy }}>{countState("EN ANÁLISIS", "normal")}</div>
+        </div>
+        <div onClick={() => setFiltroEstado("CRÍTICO")} style={{ cursor: 'pointer', backgroundColor: filtroEstado === "CRÍTICO" ? THEME.danger : THEME.white, padding: '20px', borderRadius: '20px', border: `1px solid ${THEME.border}`, textAlign: 'center', transition: '0.3s' }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', color: filtroEstado === "CRÍTICO" ? 'white' : THEME.danger }}>SOLICITUDES CRÍTICAS</div>
+          <div style={{ fontSize: '28px', fontWeight: '900', color: filtroEstado === "CRÍTICO" ? 'white' : THEME.navy }}>{countState("EN ANÁLISIS", "critico")}</div>
+        </div>
+        <div onClick={() => setFiltroEstado("REALIZADO")} style={{ cursor: 'pointer', backgroundColor: filtroEstado === "REALIZADO" ? THEME.success : THEME.white, padding: '20px', borderRadius: '20px', border: `1px solid ${THEME.border}`, textAlign: 'center', transition: '0.3s' }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', color: filtroEstado === "REALIZADO" ? 'white' : THEME.success }}>RESPUESTAS ENVIADAS</div>
+          <div style={{ fontSize: '28px', fontWeight: '900', color: filtroEstado === "REALIZADO" ? 'white' : THEME.navy }}>{countState("RESPUESTA ENTREGADA")}</div>
+        </div>
+      </div>
+
+      {/* FORMULARIO MANUAL */}
       {isAdmin && showManualForm && (
         <div style={{ maxWidth: '1400px', margin: '0 auto 30px auto', backgroundColor: THEME.white, padding: '30px', borderRadius: '24px', border: `2px solid ${THEME.accent}`, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
@@ -249,7 +268,7 @@ export default function App() {
         </div>
       )}
 
-      {/* TABLA PRINCIPAL */}
+      {/* TABLA PRINCIPAL ORDENADA DE NUEVA A ANTIGUA */}
       <div style={{ maxWidth: '1400px', margin: '0 auto', backgroundColor: THEME.white, borderRadius: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.05)', overflow: 'hidden', border: `1px solid ${THEME.border}` }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
           <thead style={{ backgroundColor: '#f1f5f9' }}>
@@ -270,13 +289,14 @@ export default function App() {
                 <tr key={i} style={{ 
                   borderBottom: `1px solid ${THEME.border}`, 
                   backgroundColor: isLocked ? '#f8fafc' : (item.SLA === 'critico' ? '#fff1f2' : THEME.white),
+                  borderLeft: isLocked ? `6px solid ${THEME.success}` : (item.SLA === 'critico' ? `6px solid ${THEME.danger}` : '6px solid transparent')
                 }}>
                   <td style={{ padding: '20px' }}>
                     <div style={{ fontWeight: '800', color: THEME.navy, fontSize: '14px', marginBottom: '8px' }}>{item.Codigo}</div>
                     <input 
                         type="date" 
                         value={formatearFechaParaInput(item.Ingreso)} 
-                        onChange={(e) => editar(item.Codigo, 'Ingreso', e.target.value)}
+                        onChange={(e) => editar(item.Codigo, 'Fecha_Ingreso', e.target.value)}
                         disabled={!isAdmin || isLocked}
                         style={{ padding: '6px', borderRadius: '6px', border: `1px solid ${THEME.border}`, fontSize: '11px', width: '130px' }}
                     />
@@ -322,7 +342,9 @@ export default function App() {
                     />
                   </td>
                   <td style={{ padding: '20px' }}>
-                    <div style={{ color: THEME.navy, fontWeight: '700', fontSize: '12px' }}>Vence: {formatearFechaChile(item.Caducidad)}</div>
+                    <div style={{ color: item.SLA === 'critico' && !isLocked ? THEME.danger : THEME.navy, fontWeight: '700', fontSize: '12px' }}>
+                        {item.SLA === 'critico' && !isLocked ? '🚨 ' : ''}Vence: {formatearFechaChile(item.Caducidad)}
+                    </div>
                     <div style={{ fontSize: '10px', color: isLocked ? THEME.success : '#64748b', fontWeight: 'bold', marginTop: '4px' }}>{item.Estado}</div>
                   </td>
                   <td style={{ padding: '20px', textAlign: 'center' }}>
